@@ -1,18 +1,10 @@
-import win32con
 import win32gui
-import win32api
 import numpy as np
-import pyautogui
 import pydirectinput # This one is slower than pyautogui, but only this one can control keyboard
 import threading
-import pprint
-import math 
-import random
 import time
-import matplotlib.pyplot as plt
 from PIL import ImageGrab
 import cv2
-import sys
 
 # Configuration
 DEBUG = True
