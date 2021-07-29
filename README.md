@@ -28,11 +28,11 @@ Currently, I don't have way to deal with big monsters. Being killed is the best 
 
 There're some equipment/jewels your should wear if you wanna farm effectively.
 1. Intimidating III
-    Let the mini monster ignore you
+    * Let the mini monster ignore you
 2. Geologist III
-    Allow you to mine 4 times and pick bone 5 times.
+    * Allow you to mine 4 times and pick bone 5 times.
 3. Hunger Resistance III
-    Prevent you suffer from stamina debuff.
+    * Prevent you suffer from stamina debuff.
 
 
 ## TODO 

@@ -5,6 +5,8 @@ import threading
 import time
 from PIL import ImageGrab
 import cv2
+# Debug
+import pprint
 
 # Configuration
 DEBUG = True
@@ -13,7 +15,7 @@ ALLOW_CONT = True #  # True #False # True
 GAME_TITLE = 'monster hunter: world(421471)' # windows title must cantain these characters
 RESIZE_SCALE = 0.5
 KEEP_ALIVE = 1 # sec
-GOAL_TOR = 1 # 0.5 # 1
+GOAL_TOR = 0.5 # 1 # 0.5 # 1
 # Color range
 NUM_HSV_LO = (30, 0, 0)
 NUM_HSV_UP = (45, 255, 255)
@@ -44,11 +46,10 @@ def sign(num):
     else: return -1
 
 def key_control():
-    global is_run, KEY_CMD, is_died
+    global is_run, KEY_CMD #, is_died
     while is_run:
-        # print(is_died)
-        if not is_died: 
-            pydirectinput.keyDown('f')
+        # if not is_died: 
+        #     pydirectinput.keyDown('f')
         
         if KEY_CMD[0] != ' ':
             pydirectinput.keyDown(KEY_CMD[0])
@@ -70,8 +71,13 @@ def key_control():
             pydirectinput.keyUp("w")
             pydirectinput.keyUp("s")
         
-        if not is_died: 
-            pydirectinput.keyUp('f')
+        if KEY_CMD[2] != ' ':
+            pydirectinput.keyDown(KEY_CMD[2])
+            pydirectinput.keyUp(KEY_CMD[2])
+
+        # if not is_died: 
+        #     pydirectinput.keyUp('f')
+        
 
 def remove_isolated_pixels(image):
     (num_stats, labels, stats, _) = cv2.connectedComponentsWithStats(image, 8, cv2.CV_32S)
@@ -97,7 +103,7 @@ if __name__ == '__main__':
         # MHW state
         is_run = True
         is_died = False
-        KEY_CMD = [' ', ' ']# "  " # 'a', 'w', 'd'
+        KEY_CMD = [' ', ' ', ' ']# "  " # 'a', 'w', 'd'
         WIN_TIME = 0
         GOAL_REST_TIME = 1 # sec
         t_rest = None
@@ -106,7 +112,6 @@ if __name__ == '__main__':
         if ALLOW_CONT:
             t_key = threading.Thread(target = key_control)
             t_key.start()
-        # mutex = threading.Lock()
 
         # Load number image 
         IMG_11 = cv2.imread("eleven.png" ,cv2.IMREAD_GRAYSCALE)#,cv2.IMREAD_UNCHANGED)# ,cv2.IMREAD_GRAYSCALE)
@@ -114,13 +119,13 @@ if __name__ == '__main__':
         IMG_4 = cv2.imread("four.png" ,cv2.IMREAD_GRAYSCALE)
         IMG_3 = cv2.imread("three.png" ,cv2.IMREAD_GRAYSCALE)
         IMG_DICT = {'3' : IMG_3, '4' : IMG_4, '10' : IMG_10, '11' : IMG_11}
-        P_LOC = (0,0)
+        # P_LOC = (0,0,0)
         WORKING_LIST = [(30, 24, 'mine_10', 2),
                 (30, 52, 'neck_point', -1), 
-                (27, 57, 'mine_neck', 2),
+                (26.5, 56, 'mine_neck', 2),
                 (26, 65, 'mid_11', -1),
                 (16.5, 55, 'upper_vein', -1), 
-                (10.5, 64, 'mine_bridge_left', 2),
+                (11, 64, 'mine_bridge_left', 2),
                 (16.5, 55, 'upper_vein', -1),
                 (23, 48, 'mine_bridge_right', 2),
                 (16.5, 55, 'upper_vein', -1),
@@ -130,17 +135,17 @@ if __name__ == '__main__':
                 (26, 65, 'mid_11', -1),
                 (30, 52, 'neck_point', -1),
                 (52, 38, 'super_mine', 1),
-                (59, 27, 'trail_10', 2),
+                (58.5, 26, 'trail_10', 2),
                 (61, 22, 'bone_10', 2),
-                (69, 11, 'mine_cats', 2),
-                (71, 8, 'trail_cats', 2),
+                (68.5, 11, 'mine_cats', 2),
+                (70, 8, 'trail_cats', 2),
                 (69, -2, 'upper_vein', -1),
                 (73, -6, 'lower_vein', -1),
                 (70, -10, 'super_bone', 1),
                 (73, -6, 'lower_vein', -1),
                 (69, -2, 'upper_vein', -1),
                 (69, -1, 'mid_cats', -1), 
-                (58, 7, 'bone_tree', 2),
+                (56, 8, 'bone_tree', 2),
                 (51, 18, 'mid_10', -1)]
 
         THE_WAY_BACK = [(-25.5, 68, 'mid_home', -1),
@@ -151,7 +156,7 @@ if __name__ == '__main__':
                         (51, 18 ,'mid_10', -1)]
         GOAL_IDX = 0
         GOAL = WORKING_LIST
-        
+        P_LOC = (0,0,0)
         # 
         N_DIC = {
                 '3' : {
@@ -159,28 +164,36 @@ if __name__ == '__main__':
                     'x2' : (0,0),
                     'cent' : (0,0),
                     'conf' : 0.0,
-                    'global_loc' : (-42.5,83)},
+                    'global_loc' : (-42.5,83),
+                    'player_loc' : (0,0)},
                 '4' : {
                     'x1' : (0,0),
                     'x2' : (0,0),
                     'cent' : (0,0),
                     'conf' : 0.0,
-                    'global_loc' : (0,0)},
+                    'global_loc' : (0,0),
+                    'player_loc' : (0,0)},
                 '10' : {
                     'x1' : (0,0),
                     'x2' : (0,0),
                     'cent' : (0,0),
                     'conf' : 0.0,
-                    'global_loc' : (68, 38)},
+                    'global_loc' : (68, 38),
+                    'player_loc' : (0,0)},
                 '11' : {
                     'x1' : (0,0),
                     'x2' : (0,0),
                     'cent' : (0,0),
                     'conf' : 0.0,
-                    'global_loc' : (19, 103)}}
+                    'global_loc' : (19, 103),
+                    'player_loc' : (0,0)}}
 
         while is_run:
             t_start = time.time()
+            
+            # Check if is MHW window active
+            if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "MONSTER HUNTER: WORLD(421471)":
+                continue
             
             # Convert to array
             img_window = np.array(ImageGrab.grab(bbox=win32gui.GetWindowRect(screens[0][0])))
@@ -210,9 +223,10 @@ if __name__ == '__main__':
             # 
             CENTER_P = (74, 71)
             CONFIENT_THRES = 0.75
+            p_loc = (0,0,0)
             for ref in N_DIC:
                 # Matching
-                res = cv2.matchTemplate(green_mask, IMG_DICT[ref], cv2.TM_CCOEFF_NORMED )# cv2.TM_CCOEFF)#  )
+                res = cv2.matchTemplate(green_mask, IMG_DICT[ref], cv2.TM_CCOEFF_NORMED )
                 
                 # Get geometry
                 max_cof = np.amax(res)
@@ -235,8 +249,15 @@ if __name__ == '__main__':
                     # Get player location
                     px = N_DIC[ref]['global_loc'][0] - (N_DIC[ref]['cent'][0] - CENTER_P[0])
                     py = N_DIC[ref]['global_loc'][1] - (N_DIC[ref]['cent'][1] - CENTER_P[1])
-                    P_LOC = (px, py)
-            # print(N_DIC)
+                    N_DIC[ref]['player_loc'] = (px, py)
+                    # 
+                    if max_cof > p_loc[2]:
+                        p_loc = (px, py, max_cof)
+                    
+            if p_loc != (0,0,0):
+                P_LOC = p_loc
+
+            # pprint.pprint(N_DIC)
             print("Player Location : " + str(P_LOC))
 
             # Check player's death or not
@@ -257,7 +278,7 @@ if __name__ == '__main__':
             print("(dx, dy) =  " + str((dx, dy)))
 
             # Reach goal, change to next one 
-            if abs(dx) <= GOAL_TOR and abs(dy) <= GOAL_TOR:
+            if t_rest != None or (abs(dx) <= GOAL_TOR and abs(dy) <= GOAL_TOR):
                 # Relex a while at goal 
                 if t_rest != None:
                     if time.time() - t_rest > GOAL[GOAL_IDX][-1]:
@@ -276,8 +297,8 @@ if __name__ == '__main__':
                 
 
             # Control keyboard
-            # if mutex.acquire(blocking = False):# Critical Section
-            if abs(dx) > GOAL_TOR:
+            KEY_CMD = [' ', ' ', ' ']
+            if t_rest == None and abs(dx) > GOAL_TOR:
                 if dx > 0:
                     KEY_CMD[0] = "d"
                 else:
@@ -285,16 +306,22 @@ if __name__ == '__main__':
             else:
                 KEY_CMD[0] = " "
             
-            if abs(dy) > GOAL_TOR:
+            if t_rest == None and abs(dy) > GOAL_TOR:
                 if dy > 0:
                     KEY_CMD[1] = "s"
                 else:
                     KEY_CMD[1] = "w"
             else:
                 KEY_CMD[1] = " "
+            
+            if is_died == False:
+                KEY_CMD[2] = 'f'
+            else:
+                KEY_CMD[2] = ' '
+            
             print(KEY_CMD)
-            # mutex.release()
 
+            
             print("loop took {} seconds".format(time.time() - t_start))
             cv2.imshow('green_mask', green_mask)
 
