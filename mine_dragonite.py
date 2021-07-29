@@ -48,9 +48,6 @@ def sign(num):
 def key_control():
     global is_run, KEY_CMD #, is_died
     while is_run:
-        # if not is_died: 
-        #     pydirectinput.keyDown('f')
-        
         if KEY_CMD[0] != ' ':
             pydirectinput.keyDown(KEY_CMD[0])
             if KEY_CMD[0] == 'a':
@@ -74,9 +71,6 @@ def key_control():
         if KEY_CMD[2] != ' ':
             pydirectinput.keyDown(KEY_CMD[2])
             pydirectinput.keyUp(KEY_CMD[2])
-
-        # if not is_died: 
-        #     pydirectinput.keyUp('f')
         
 
 def remove_isolated_pixels(image):
@@ -89,15 +83,19 @@ def remove_isolated_pixels(image):
 
 if __name__ == '__main__':
     try:
-    # if True:
         winlist = []
         names = list_all_windows_name()
         # print(names)
+        
         screen = None
-        for name in names:
-            if GAME_TITLE in name:
-                screen = name
-                print("Windows name: " + screen)
+        while screen == None:
+            for name in names:
+                if GAME_TITLE in name:
+                    screen = name
+                    print("Windows name: " + screen)
+            print("Can't find game. Please execute MHW!")
+            time.sleep(0.1)
+        print("Found MHW screen!")
         screens = get_screens(screen)
         
         # MHW state
@@ -119,7 +117,6 @@ if __name__ == '__main__':
         IMG_4 = cv2.imread("four.png" ,cv2.IMREAD_GRAYSCALE)
         IMG_3 = cv2.imread("three.png" ,cv2.IMREAD_GRAYSCALE)
         IMG_DICT = {'3' : IMG_3, '4' : IMG_4, '10' : IMG_10, '11' : IMG_11}
-        # P_LOC = (0,0,0)
         WORKING_LIST = [(30, 24, 'mine_10', 2),
                 (30, 52, 'neck_point', -1), 
                 (26.5, 56, 'mine_neck', 2),
@@ -138,7 +135,7 @@ if __name__ == '__main__':
                 (58.5, 26, 'trail_10', 2),
                 (61, 22, 'bone_10', 2),
                 (68.5, 11, 'mine_cats', 2),
-                (70, 8, 'trail_cats', 2),
+                (69.5, 8, 'trail_cats', 2),
                 (69, -2, 'upper_vein', -1),
                 (73, -6, 'lower_vein', -1),
                 (70, -10, 'super_bone', 1),
@@ -210,16 +207,6 @@ if __name__ == '__main__':
             # Mask 
             green_mask = cv2.inRange(img_hsv, NUM_HSV_LO, NUM_HSV_UP)
             remove_isolated_pixels(green_mask)
-            # print(kernel)
-            # green_mask = cv2.erode(green_mask, kernel, iterations = 1)
-            # green_mask = cv2.cvtColor(img_mhw[370:512, 52:200],cv2.COLOR_RGB2GRAY)
-            # green_mask = img_hsv[:,:,0]
-            
-            # img = cv.imread('wiki.jpg',0)
-            # equ = cv2.equalizeHist(green_mask)
-            # green_mask = np.hstack((green_mask,equ)) #stacking images side-by-side
-            # cv.imwrite('res.png',green_mask)
-
             # 
             CENTER_P = (74, 71)
             CONFIENT_THRES = 0.75
@@ -323,6 +310,7 @@ if __name__ == '__main__':
 
             
             print("loop took {} seconds".format(time.time() - t_start))
+            print("========================")
             cv2.imshow('green_mask', green_mask)
 
             # Show image

@@ -252,6 +252,10 @@ if __name__ == '__main__':
         while is_run:
             t_start = time.time()
             
+            # Check if is MHW window active
+            if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "MONSTER HUNTER: WORLD(421471)":
+                continue
+            
             # Convert to array
             img_window = np.array(ImageGrab.grab(bbox=win32gui.GetWindowRect(screens[0][0])))
             
