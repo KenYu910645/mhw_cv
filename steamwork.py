@@ -80,9 +80,23 @@ def sign(num):
     else: return -1
 
 def key_control():
-    global is_run, KEY_CMD, B_DIC
+    global is_run, KEY_CMD, B_DIC, CUR_MODE
     is_last_ans = False
+    KEY_ALIVE = 10 # sec
+    t_key_alive = time.time()
     while is_run:
+        # Check if is MHW window active
+        if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "MONSTER HUNTER: WORLD(421471)":
+            time.sleep(0.1)
+            continue
+
+        if time.time() - t_key_alive > KEY_ALIVE:
+            CUR_MODE = 'unknown'
+        
+        if CUR_MODE == 'unknown':
+            pydirectinput.press('space')
+            time.sleep(0.1)
+
         if KEY_CMD != "":
             mutex.acquire()
             key = KEY_CMD[0]
@@ -108,7 +122,9 @@ def key_control():
             else:
                 is_last_ans = False
             mutex.release()
+            t_key_alive = time.time()
         else:
+            
             time.sleep(0.1)
 
 def switch_mode(mode):
@@ -165,8 +181,8 @@ def switch_mode(mode):
     _,IMG_1 = cv2.threshold(cv2.imread('1_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
     _,IMG_2 = cv2.threshold(cv2.imread('2_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
     _,IMG_3 = cv2.threshold(cv2.imread('3_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
-    IMG_123 =  [IMG_1, IMG_2, IMG_3]
-
+    # IMG_123 =  [IMG_1, IMG_2, IMG_3]
+    IMG_123 = {'1' : IMG_1, '2' : IMG_2, '3' : IMG_3}
 def show_text(img, text):
     # Draw a solid rectangle 
     img = cv2.rectangle(img, LOG_LOC, (LOG_LOC[0] + 200, LOG_LOC[1] + (len(text)+1)*LOG_HEIGHT), (0, 0, 0), -1)
@@ -252,10 +268,6 @@ if __name__ == '__main__':
         while is_run:
             t_start = time.time()
             
-            # Check if is MHW window active
-            if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "MONSTER HUNTER: WORLD(421471)":
-                continue
-            
             # Convert to array
             img_window = np.array(ImageGrab.grab(bbox=win32gui.GetWindowRect(screens[0][0])))
             
@@ -279,28 +291,20 @@ if __name__ == '__main__':
             mask_con = []
             for i in ['b1', 'b2', 'b3']:
                 ans_hsv = cv2.cvtColor(img_mhw[B_DIC[i]['a1'][1]:B_DIC[i]['a2'][1],
-                                            B_DIC[i]['a1'][0]:B_DIC[i]['a2'][0]],
-                                            cv2.COLOR_RGB2HSV)
+                                               B_DIC[i]['a1'][0]:B_DIC[i]['a2'][0]],
+                                               cv2.COLOR_RGB2HSV)
                 ans_mask = cv2.inRange(ans_hsv, ANS_HSV_LO, ANS_HSV_UP)
                 
                 # Show maskes
                 mask_con.append(ans_mask) # axis = 0 is vertical
 
-                mask_count = []
-                mask_tmp = []
-                for ii in IMG_123:
-                    mask_xor = cv2.bitwise_xor(ii, ans_mask)
-                    mask_count.append(cv2.countNonZero(mask_xor))
-                    mask_tmp.append(mask_xor)
-
-                # img_tmp = np.concatenate(mask_tmp, axis=1) # axis = 0 is vertical
-                # cv2.imshow('tmp', img_tmp)
-                # print(mask_count)
-                
+                ANS_COF_THRES = 0.8
                 B_DIC[i]['answer'] = ''
-                for ii in range(3):
-                    if mask_count[ii] < ANS_THRES:
-                        B_DIC[i]['answer'] = str(ii+1)
+                for ii in IMG_123:
+                    res = cv2.matchTemplate(ans_mask, IMG_123[ii], cv2.TM_CCOEFF_NORMED )
+                    max_cof = np.amax(res)
+                    if max_cof > ANS_COF_THRES:
+                        B_DIC[i]['answer'] = ii
                         break
 
                 # Draw text on top of boxes
@@ -310,7 +314,6 @@ if __name__ == '__main__':
 
             # Check WIN/LOSE
             ans = B_DIC['b1']['answer'] + B_DIC['b2']['answer'] + B_DIC['b3']['answer']
-            # if ans != '':
             if len(ans) == 3:
                 if not IS_LAST_ANS:
                     IS_LAST_ANS = True

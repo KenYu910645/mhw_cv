@@ -1,24 +1,91 @@
-import win32gui
-import numpy as np
-import pydirectinput # This one is slower than pyautogui, but only this one can control keyboard
 import threading
 import time
+# Computer vision
 from PIL import ImageGrab
 import cv2
-# Debug
-import pprint
+import numpy as np
+# keyboard listerner
+import pynput
+# from directkeys import PressKey,ReleaseKey
+# Screen monitor
+import win32gui
+
+# Logging
+import logging
+import sys
 
 # Configuration
-DEBUG = True
-ALLOW_CONT = True #  # True #False # True
+DEBUG = True 
 
 GAME_TITLE = 'monster hunter: world(421471)' # windows title must cantain these characters
 RESIZE_SCALE = 0.5
-KEEP_ALIVE = 1 # sec
+KEEP_ALIVE = 120 # sec
 GOAL_TOR = 0.5 # 1 # 0.5 # 1
 # Color range
 NUM_HSV_LO = (30, 0, 0)
 NUM_HSV_UP = (45, 255, 255)
+
+import ctypes
+
+SendInput = ctypes.windll.user32.SendInput
+
+# Direct Key Code Table http://www.flint.jp/misc/?q=dik&lang=en
+DKT = {'w' : 0x11,
+       'a' : 0x1E,
+       's' : 0x1F,
+       'd' : 0x20,
+       'f' : 0x21,
+       'space' : 0x39,
+       'ctrl' : 0x1D,
+       '1' : 0x02,
+       '2' : 0x03,
+       '3' : 0x04,
+       '' : 0x2C}
+
+# C struct redefinitions 
+PUL = ctypes.POINTER(ctypes.c_ulong)
+class KeyBdInput(ctypes.Structure):
+    _fields_ = [("wVk", ctypes.c_ushort),
+                ("wScan", ctypes.c_ushort),
+                ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+
+class HardwareInput(ctypes.Structure):
+    _fields_ = [("uMsg", ctypes.c_ulong),
+                ("wParamL", ctypes.c_short),
+                ("wParamH", ctypes.c_ushort)]
+
+class MouseInput(ctypes.Structure):
+    _fields_ = [("dx", ctypes.c_long),
+                ("dy", ctypes.c_long),
+                ("mouseData", ctypes.c_ulong),
+                ("dwFlags", ctypes.c_ulong),
+                ("time",ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+
+class Input_I(ctypes.Union):
+    _fields_ = [("ki", KeyBdInput),
+                 ("mi", MouseInput),
+                 ("hi", HardwareInput)]
+
+class Input(ctypes.Structure):
+    _fields_ = [("type", ctypes.c_ulong),
+                ("ii", Input_I)]
+
+def PressKey(char):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.ki = KeyBdInput( 0, DKT[char], 0x0008, 0, ctypes.pointer(extra) )
+    x = Input( ctypes.c_ulong(1), ii_ )
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+def ReleaseKey(char):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.ki = KeyBdInput( 0, DKT[char], 0x0008 | 0x0002, 0, ctypes.pointer(extra) )
+    x = Input( ctypes.c_ulong(1), ii_ )
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 def enum_cb(hwnd, results):
     global winlist
@@ -46,33 +113,35 @@ def sign(num):
     else: return -1
 
 def key_control():
-    global is_run, KEY_CMD #, is_died
-    while is_run:
-        if KEY_CMD[0] != ' ':
-            pydirectinput.keyDown(KEY_CMD[0])
-            if KEY_CMD[0] == 'a':
-                pydirectinput.keyUp('d')
-            else:
-                pydirectinput.keyUp('a')
-        else:
-            pydirectinput.keyUp("a")
-            pydirectinput.keyUp("d")
-        
-        if KEY_CMD[1] != ' ':
-            pydirectinput.keyDown(KEY_CMD[1])
-            if KEY_CMD[1] == 'w':
-                pydirectinput.keyUp('s')
-            else:
-                pydirectinput.keyUp('w')
-        else:
-            pydirectinput.keyUp("w")
-            pydirectinput.keyUp("s")
-        
-        if KEY_CMD[2] != ' ':
-            pydirectinput.keyDown(KEY_CMD[2])
-            pydirectinput.keyUp(KEY_CMD[2])
-        
+    global IS_RUN, KEY_CMD, IS_CTRL
+    last_cmd = ['', '', '']
+    while IS_RUN:
+        if IS_CTRL:
+            if last_cmd != KEY_CMD:
+                # Release all key
+                ReleaseKey('a')
+                ReleaseKey('s')
+                ReleaseKey('d')
+                ReleaseKey('w')
+            if KEY_CMD[0] != '':
+                PressKey(KEY_CMD[0])
+            if KEY_CMD[1] != '':
+                PressKey(KEY_CMD[1])
+        last_cmd = KEY_CMD
+        time.sleep(0.1)
 
+def f_control():
+    global KEY_CMD
+    while IS_RUN:
+        if IS_CTRL:
+            if KEY_CMD[2] != '':
+                PressKey(KEY_CMD[2])
+                time.sleep(0.1)
+                ReleaseKey(KEY_CMD[2])
+                time.sleep(0.1)
+                continue
+        time.sleep(0.1)
+        
 def remove_isolated_pixels(image):
     (num_stats, labels, stats, _) = cv2.connectedComponentsWithStats(image, 8, cv2.CV_32S)
     new_image = image.copy()
@@ -81,7 +150,27 @@ def remove_isolated_pixels(image):
             new_image[labels == label] = 0
     return new_image
 
+def p_pressed():
+    global IS_CTRL
+    if IS_CTRL:
+        logger.warning("************ USER PRESS P, SCRIPT PAUSE **************")
+        IS_CTRL = False
+    else:
+        logger.warning("************ USER PRESS P, RESUME MINEING **************")
+        IS_CTRL = True
+
 if __name__ == '__main__':
+    # Set up logger
+    formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+    logger = logging.getLogger('mhw_cv_logger')
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+
+    # Record logging message at logging file
+    h_file = logging.FileHandler("mine_dragonite.log")
+    h_file.setFormatter(formatter)
+    h_file.setLevel(logging.INFO)
+    logger.addHandler(h_file)
+
     try:
         winlist = []
         names = list_all_windows_name()
@@ -92,24 +181,29 @@ if __name__ == '__main__':
             for name in names:
                 if GAME_TITLE in name:
                     screen = name
-                    print("Windows name: " + screen)
-            print("Can't find game. Please execute MHW!")
+                    logger.info("Windows name: " + screen)
+            logger.info("Can't find game. Please execute MHW!")
             time.sleep(0.1)
-        print("Found MHW screen!")
+        logger.info("Found MHW screen!")
         screens = get_screens(screen)
         
         # MHW state
-        is_run = True
+        IS_RUN = True
         is_died = False
-        KEY_CMD = [' ', ' ', ' ']# "  " # 'a', 'w', 'd'
-        WIN_TIME = 0
-        GOAL_REST_TIME = 1 # sec
+        KEY_CMD = ['', '', '']# "", 'a', 'w', 'd'
         t_rest = None
+        t_last_reach_goal = time.time()
+        IS_CTRL = False
         
         # Init threads
-        if ALLOW_CONT:
-            t_key = threading.Thread(target = key_control)
-            t_key.start()
+        t_key = threading.Thread(target = key_control)
+        t_key.start()
+        t_f = threading.Thread(target = f_control)
+        t_f.start()
+
+        # Collect events until released
+        p_listener = pynput.keyboard.GlobalHotKeys({'p': p_pressed})
+        p_listener.start()
 
         # Load number image 
         IMG_11 = cv2.imread("eleven.png" ,cv2.IMREAD_GRAYSCALE)#,cv2.IMREAD_UNCHANGED)# ,cv2.IMREAD_GRAYSCALE)
@@ -119,35 +213,35 @@ if __name__ == '__main__':
         IMG_DICT = {'3' : IMG_3, '4' : IMG_4, '10' : IMG_10, '11' : IMG_11}
         WORKING_LIST = [(30, 24, 'mine_10', 2),
                 (30, 52, 'neck_point', -1), 
-                (26.5, 56, 'mine_neck', 2),
+                (26, 55.5, 'mine_neck', 2),
                 (26, 65, 'mid_11', -1),
                 (16.5, 55, 'upper_vein', -1), 
-                (11, 64, 'mine_bridge_left', 2),
-                (16.5, 55, 'upper_vein', -1),
                 (23, 48, 'mine_bridge_right', 2),
                 (16.5, 55, 'upper_vein', -1),
-                (26, 65, 'mid_11', -1),
+                (11, 62, 'mine_bridge_left', 2),
+                (12.5, 76.0, 'lower_vein', -1),
                 (19, 75, 'trail_11', 2),
                 (41, 87, 'bone_11', 2),
                 (26, 65, 'mid_11', -1),
                 (30, 52, 'neck_point', -1),
-                (52, 38, 'super_mine', 1),
-                (58.5, 26, 'trail_10', 2),
+                (51, 39, 'super_mine', 2),
+                (58, 27, 'trail_10', 2),
                 (61, 22, 'bone_10', 2),
                 (68.5, 11, 'mine_cats', 2),
-                (69.5, 8, 'trail_cats', 2),
+                (70, 8, 'trail_cats', 2),
                 (69, -2, 'upper_vein', -1),
                 (73, -6, 'lower_vein', -1),
-                (70, -10, 'super_bone', 1),
+                (70, -10, 'super_bone', 2),
                 (73, -6, 'lower_vein', -1),
-                (69, -2, 'upper_vein', -1),
+                (63, 2, 'upper_vein', -1),
                 (69, -1, 'mid_cats', -1), 
-                (56, 8, 'bone_tree', 2),
+                (56.5, 8, 'bone_tree', 2),
                 (51, 18, 'mid_10', -1)]
 
         THE_WAY_BACK = [(-25.5, 68, 'mid_home', -1),
-                        (-27, 58, 'upper_vein', -1),
+                        (-26.5, 59, 'upper_vein', -1),
                         (-29, 52, 'lower_vein', -1),
+                        (-18, 49, 'transition', -1),
                         (3, 24, 'entry_point', -1),
                         (28, 9, 'mid_4', -1),
                         (51, 18 ,'mid_10', -1)]
@@ -185,12 +279,23 @@ if __name__ == '__main__':
                     'global_loc' : (19, 103),
                     'player_loc' : (0,0)}}
 
-        while is_run:
+        while IS_RUN:
             t_start = time.time()
             
             # Check if is MHW window active
             if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != "MONSTER HUNTER: WORLD(421471)":
-                continue
+                IS_CTRL = False
+            
+            # Check if it's too long doesn't reach goal
+            if (IS_CTRL) and (not is_died) and time.time() - t_last_reach_goal > KEEP_ALIVE:
+                logger.warning("******************** CAN'T REACH GOAL FOR TOO LONG, GO HOME ************************** ")
+                t_last_reach_goal = time.time()
+                # Throw homing ball
+                for i in range(3):
+                    PressKey('3')
+                    time.sleep(0.8)
+                    ReleaseKey('3')
+                    time.sleep(0.8)
             
             # Convert to array
             img_window = np.array(ImageGrab.grab(bbox=win32gui.GetWindowRect(screens[0][0])))
@@ -215,9 +320,30 @@ if __name__ == '__main__':
                 # Matching
                 res = cv2.matchTemplate(green_mask, IMG_DICT[ref], cv2.TM_CCOEFF_NORMED )
                 
-                # Get geometry
                 max_cof = np.amax(res)
-                if max_cof > CONFIENT_THRES:
+                loc = np.where(res == np.amax(res))
+                conf_bonus = 0.0
+                BONUS_MAX = 0.2
+                BONUS_COF = 0.02 # 0.2/10 <- 10 is the pixel range you wanna allow
+                for pt in zip(*loc[::-1]):
+                    center  = (pt[0] + IMG_DICT[ref].shape[1]/2,
+                               pt[1] + IMG_DICT[ref].shape[0]/2)
+                    conf_bonus = BONUS_MAX - (abs(center[0] - N_DIC[ref]['cent'][0]) +\
+                                              abs(center[1] - N_DIC[ref]['cent'][1])) * BONUS_COF
+                    if conf_bonus < 0.0:
+                        conf_bonus = 0.0
+
+                    # Negative bonus, avoid two label overlap
+                    for ref_t in N_DIC:
+                        if ref_t != ref:
+                            bonus_neg = BONUS_MAX - (abs(center[0] - N_DIC[ref_t]['cent'][0]) +\
+                                                     abs(center[1] - N_DIC[ref_t]['cent'][1])) * BONUS_COF
+                            if bonus_neg < 0:
+                                bonus_neg = 0
+                            conf_bonus -= bonus_neg
+
+                # Get geometry
+                if (max_cof + conf_bonus) > CONFIENT_THRES:
                     loc = np.where(res == np.amax(res))
                     for pt in zip(*loc[::-1]):
                         N_DIC[ref]['x1'] = pt
@@ -225,7 +351,7 @@ if __name__ == '__main__':
                                             pt[1] + IMG_DICT[ref].shape[0])
                         N_DIC[ref]['cent'] = (pt[0] + IMG_DICT[ref].shape[1]/2,
                                               pt[1] + IMG_DICT[ref].shape[0]/2)
-                        N_DIC[ref]['conf'] = max_cof
+                        N_DIC[ref]['conf'] = max_cof + conf_bonus
                     # Draw rectangle and text
                     img_map = cv2.putText(img_map, ref, N_DIC[ref]['x1'],
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 255), 1, cv2.LINE_AA)
@@ -237,35 +363,36 @@ if __name__ == '__main__':
                     px = N_DIC[ref]['global_loc'][0] - (N_DIC[ref]['cent'][0] - CENTER_P[0])
                     py = N_DIC[ref]['global_loc'][1] - (N_DIC[ref]['cent'][1] - CENTER_P[1])
                     N_DIC[ref]['player_loc'] = (px, py)
-                    # 
-                    if max_cof > p_loc[2]:
-                        p_loc = (px, py, max_cof)
+                    
+                    # Find the max confident label's player location 
+                    if max_cof + conf_bonus > p_loc[2]:
+                        p_loc = (px, py, max_cof + conf_bonus)
                     
             if p_loc != (0,0,0):
                 P_LOC = p_loc
 
-            # pprint.pprint(N_DIC)
-            print("Player Location : " + str(P_LOC))
+            logger.info("Player Location : " + str(P_LOC))
 
             # Check player's death or not
             DEATH_LOC = (-23, 73)
             DEATH_TOR = 2
-            if (not is_died) and abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
-                print("DEATH")
+            if abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
+            # if (not is_died) and abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
                 GOAL = THE_WAY_BACK
                 GOAL_IDX = 0
                 is_died = True
-            print("Death: " + str(is_died))
+                logger.warning("************** I HAVE DIED ***************")
 
             # CUR_GOAL
-            print("Current Goal : " + str(GOAL[GOAL_IDX]))
+            logger.info("Current Goal : " + str(GOAL[GOAL_IDX]))
 
             dx = GOAL[GOAL_IDX][0] - P_LOC[0]
             dy = GOAL[GOAL_IDX][1] - P_LOC[1]
-            print("(dx, dy) =  " + str((dx, dy)))
+            logger.info("(dx, dy) =  " + str((dx, dy)))
 
             # Reach goal, change to next one 
             if t_rest != None or (abs(dx) <= GOAL_TOR and abs(dy) <= GOAL_TOR):
+                t_last_reach_goal = time.time()
                 # Relex a while at goal 
                 if t_rest != None:
                     if time.time() - t_rest > GOAL[GOAL_IDX][-1]:
@@ -275,6 +402,7 @@ if __name__ == '__main__':
                             is_died = False
                             GOAL = WORKING_LIST
                             GOAL_IDX = 0
+                            logger.warning("*************** I'M BACK TO WORK ******************")
                         else:
                             GOAL_IDX = (GOAL_IDX+1)%len(GOAL)
                 else:
@@ -284,14 +412,14 @@ if __name__ == '__main__':
                 
 
             # Control keyboard
-            KEY_CMD = [' ', ' ', ' ']
+            KEY_CMD = ['', '', '']
             if t_rest == None and abs(dx) > GOAL_TOR:
                 if dx > 0:
                     KEY_CMD[0] = "d"
                 else:
                     KEY_CMD[0] = "a"
             else:
-                KEY_CMD[0] = " "
+                KEY_CMD[0] = ''
             
             if t_rest == None and abs(dy) > GOAL_TOR:
                 if dy > 0:
@@ -299,25 +427,23 @@ if __name__ == '__main__':
                 else:
                     KEY_CMD[1] = "w"
             else:
-                KEY_CMD[1] = " "
+                KEY_CMD[1] = ''
             
             if is_died == False:
                 KEY_CMD[2] = 'f'
             else:
-                KEY_CMD[2] = ' '
+                KEY_CMD[2] = ''
             
-            print(KEY_CMD)
-
-            
-            print("loop took {} seconds".format(time.time() - t_start))
-            print("========================")
+            logger.info("KEY_CMD : " + str(KEY_CMD))
+            logger.info("FPS : " + str(int(1/(time.time() - t_start))))
+            logger.info("========================")
             cv2.imshow('green_mask', green_mask)
 
             # Show image
             cv2.imshow('window',cv2.cvtColor(img_map, cv2.COLOR_BGR2RGB))
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                is_run = False
+                IS_RUN = False
     except (Exception, KeyboardInterrupt) as e:
-        is_run = False
-        print("Catched Exception!")
-        print(e)
+        IS_RUN = False
+        logger.error("Catched Exception!")
+        logger.error(e)
