@@ -5,11 +5,10 @@ from PIL import ImageGrab
 import cv2
 import numpy as np
 # keyboard listerner
+from directkeys import PressKey,ReleaseKey
 import pynput
-# from directkeys import PressKey,ReleaseKey
 # Screen monitor
 import win32gui
-
 # Logging
 import logging
 import sys
@@ -24,68 +23,6 @@ GOAL_TOR = 0.5 # 1 # 0.5 # 1
 # Color range
 NUM_HSV_LO = (30, 0, 0)
 NUM_HSV_UP = (45, 255, 255)
-
-import ctypes
-
-SendInput = ctypes.windll.user32.SendInput
-
-# Direct Key Code Table http://www.flint.jp/misc/?q=dik&lang=en
-DKT = {'w' : 0x11,
-       'a' : 0x1E,
-       's' : 0x1F,
-       'd' : 0x20,
-       'f' : 0x21,
-       'space' : 0x39,
-       'ctrl' : 0x1D,
-       '1' : 0x02,
-       '2' : 0x03,
-       '3' : 0x04,
-       '' : 0x2C}
-
-# C struct redefinitions 
-PUL = ctypes.POINTER(ctypes.c_ulong)
-class KeyBdInput(ctypes.Structure):
-    _fields_ = [("wVk", ctypes.c_ushort),
-                ("wScan", ctypes.c_ushort),
-                ("dwFlags", ctypes.c_ulong),
-                ("time", ctypes.c_ulong),
-                ("dwExtraInfo", PUL)]
-
-class HardwareInput(ctypes.Structure):
-    _fields_ = [("uMsg", ctypes.c_ulong),
-                ("wParamL", ctypes.c_short),
-                ("wParamH", ctypes.c_ushort)]
-
-class MouseInput(ctypes.Structure):
-    _fields_ = [("dx", ctypes.c_long),
-                ("dy", ctypes.c_long),
-                ("mouseData", ctypes.c_ulong),
-                ("dwFlags", ctypes.c_ulong),
-                ("time",ctypes.c_ulong),
-                ("dwExtraInfo", PUL)]
-
-class Input_I(ctypes.Union):
-    _fields_ = [("ki", KeyBdInput),
-                 ("mi", MouseInput),
-                 ("hi", HardwareInput)]
-
-class Input(ctypes.Structure):
-    _fields_ = [("type", ctypes.c_ulong),
-                ("ii", Input_I)]
-
-def PressKey(char):
-    extra = ctypes.c_ulong(0)
-    ii_ = Input_I()
-    ii_.ki = KeyBdInput( 0, DKT[char], 0x0008, 0, ctypes.pointer(extra) )
-    x = Input( ctypes.c_ulong(1), ii_ )
-    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
-
-def ReleaseKey(char):
-    extra = ctypes.c_ulong(0)
-    ii_ = Input_I()
-    ii_.ki = KeyBdInput( 0, DKT[char], 0x0008 | 0x0002, 0, ctypes.pointer(extra) )
-    x = Input( ctypes.c_ulong(1), ii_ )
-    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 def enum_cb(hwnd, results):
     global winlist
@@ -234,9 +171,9 @@ if __name__ == '__main__':
                 (70, -10, 'super_bone', 2),
                 (73, -6, 'lower_vein', -1),
                 (63, 2, 'upper_vein', -1),
-                (69, -1, 'mid_cats', -1), 
                 (56.5, 8, 'bone_tree', 2),
-                (51, 18, 'mid_10', -1)]
+                (44, 6, 'avoid_deer_1', -1),
+                (33, 11, 'avoid_deer_2', -1)]
 
         THE_WAY_BACK = [(-25.5, 68, 'mid_home', -1),
                         (-26.5, 59, 'upper_vein', -1),
@@ -302,12 +239,18 @@ if __name__ == '__main__':
             
             # Resize
             (imgH, imgW, _) = img_window.shape
-            img_mhw = cv2.resize(img_window, (int(imgW*RESIZE_SCALE), int(imgH*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
-            (h, w, _) = img_mhw.shape
+            # img_mhw = cv2.resize(img_window, (int(imgW*RESIZE_SCALE), int(imgH*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
+            # (h, w, _) = img_mhw.shape
+            print((imgH, imgW)) # (1080, 1920)
 
             # Get mini map
-            img_map = img_mhw[370:512, 52:200]
-            img_hsv = cv2.cvtColor(img_mhw[370:512, 52:200],cv2.COLOR_RGB2HSV)
+            img_map = img_window[int(imgH*(740/1080)):int(imgW*(1024/1920)), int(imgH*(104/1080)):int(imgW*(400/1920))]
+            # img_map = img_mhw[370:512, 52:200] # shape = (142, 148)
+            # img_hsv = cv2.cvtColor(img_mhw[370:512, 52:200],cv2.COLOR_RGB2HSV)
+            img_map = cv2.resize(img_map, (int(img_map.shape[1]*RESIZE_SCALE), int(img_map.shape[0]*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
+            
+            img_hsv = cv2.cvtColor(img_map, cv2.COLOR_RGB2HSV)
+            print("img_map = " + str(img_map.shape))
 
             # Mask 
             green_mask = cv2.inRange(img_hsv, NUM_HSV_LO, NUM_HSV_UP)
@@ -377,7 +320,6 @@ if __name__ == '__main__':
             DEATH_LOC = (-23, 73)
             DEATH_TOR = 2
             if abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
-            # if (not is_died) and abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
                 GOAL = THE_WAY_BACK
                 GOAL_IDX = 0
                 is_died = True
