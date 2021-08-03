@@ -241,7 +241,7 @@ if __name__ == '__main__':
             (imgH, imgW, _) = img_window.shape
             # img_mhw = cv2.resize(img_window, (int(imgW*RESIZE_SCALE), int(imgH*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
             # (h, w, _) = img_mhw.shape
-            print((imgH, imgW)) # (1080, 1920)
+            print("img_window.shape = " + str((imgH, imgW))) # (1080, 1920)
 
             # Get mini map
             img_map = img_window[int(imgH*(740/1080)):int(imgW*(1024/1920)), int(imgH*(104/1080)):int(imgW*(400/1920))]
@@ -250,7 +250,7 @@ if __name__ == '__main__':
             img_map = cv2.resize(img_map, (int(img_map.shape[1]*RESIZE_SCALE), int(img_map.shape[0]*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
             
             img_hsv = cv2.cvtColor(img_map, cv2.COLOR_RGB2HSV)
-            print("img_map = " + str(img_map.shape))
+            print("img_map.shape = " + str(img_map.shape))
 
             # Mask 
             green_mask = cv2.inRange(img_hsv, NUM_HSV_LO, NUM_HSV_UP)
