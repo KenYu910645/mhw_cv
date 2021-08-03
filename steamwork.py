@@ -178,10 +178,9 @@ def switch_mode(mode):
     B_DIC['b3']['a2'] = (int((LEFT_UP_X + ANS_W + INTERVAL_13)*RESIZE_SCALE), int((LEFT_UP_Y)*RESIZE_SCALE)) # (col, row)
 
     # Load reference image
-    _,IMG_1 = cv2.threshold(cv2.imread('1_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
-    _,IMG_2 = cv2.threshold(cv2.imread('2_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
-    _,IMG_3 = cv2.threshold(cv2.imread('3_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
-    # IMG_123 =  [IMG_1, IMG_2, IMG_3]
+    _,IMG_1 = cv2.threshold(cv2.imread('steamwork_pic/1_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
+    _,IMG_2 = cv2.threshold(cv2.imread('steamwork_pic/2_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
+    _,IMG_3 = cv2.threshold(cv2.imread('steamwork_pic/3_' + mode + '.jpg', cv2.IMREAD_UNCHANGED),127,255,cv2.THRESH_BINARY)
     IMG_123 = {'1' : IMG_1, '2' : IMG_2, '3' : IMG_3}
 def show_text(img, text):
     # Draw a solid rectangle 
