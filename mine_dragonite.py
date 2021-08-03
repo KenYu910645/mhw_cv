@@ -247,7 +247,8 @@ if __name__ == '__main__':
             img_map = img_window[int(imgH*(740/1080)):int(imgW*(1024/1920)), int(imgH*(104/1080)):int(imgW*(400/1920))]
             # img_map = img_mhw[370:512, 52:200] # shape = (142, 148)
             # img_hsv = cv2.cvtColor(img_mhw[370:512, 52:200],cv2.COLOR_RGB2HSV)
-            img_map = cv2.resize(img_map, (int(img_map.shape[1]*RESIZE_SCALE), int(img_map.shape[0]*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
+            # img_map = cv2.resize(img_map, (int(img_map.shape[1]*RESIZE_SCALE), int(img_map.shape[0]*RESIZE_SCALE)), interpolation=cv2.INTER_AREA)
+            img_map = cv2.resize(img_map, (148, 142), interpolation=cv2.INTER_AREA)
             
             img_hsv = cv2.cvtColor(img_map, cv2.COLOR_RGB2HSV)
             print("img_map.shape = " + str(img_map.shape))
