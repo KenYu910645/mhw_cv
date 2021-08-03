@@ -3,10 +3,10 @@
 block_cipher = None
 
 
-a = Analysis(['C:/Users/lucky/Desktop/mhw_cv/mine_dragonite.py'],
+a = Analysis(['mine_dragonite.py'],
              pathex=['C:\\Users\\lucky\\Desktop\\mhw_cv'],
              binaries=[],
-             datas=[('C:/Users/lucky/Desktop/mhw_cv/directkeys.py', '.')],
+             datas=[('directkeys.py', '.')],
              hiddenimports=['pynput.keyboard._win32', 'pynput.mouse._win32'],
              hookspath=[],
              runtime_hooks=[],
