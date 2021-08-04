@@ -4,7 +4,7 @@ Auto-steamwork bot and Auto-mining bot using computer vision
 ## Requirement
 ```
 python 3.8.0
-pip install PyDirectInput Pillow opencv-python numpy
+pip install Pillow opencv-python numpy pynput pypiwin32 pyinstaller
 ```
 ## Run auto steamwork 
 Execute your MHW, go to steamwork and press 'space' to start it.
@@ -26,6 +26,8 @@ python mine_dragonite.py
 Through out the mining process, always make sure your camera is facing NORTH, otherwise it will go nuts.
 Currently, I don't have a way to deal with big monsters. Being killed is the best I can do for now. But the character know how to come back from the camp though, so don't worry.
 
+Press 'p' to start the script
+
 There're some equipment/jewels your should wear if you wanna farm effectively.
 1. Intimidating III
     * Let mini monsters ignore you
@@ -37,5 +39,7 @@ There're some equipment/jewels your should wear if you wanna farm effectively.
     * Speed up the gathering animation
 
 ## TODO 
+* Dev a GUI
 * Add a auto-faceing north feature
 * Wear invisible cloak when monster is near.
+
