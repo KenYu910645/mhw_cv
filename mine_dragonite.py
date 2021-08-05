@@ -17,7 +17,7 @@ import tkinter as tk
 import tkinter.messagebox
 
 # Configuration
-DEBUG = False # rue # False
+DEBUG = False
 GAME_TITLE = 'monster hunter: world(421471)' # windows title must cantain these characters
 KEEP_ALIVE = 120 # sec
 GOAL_TOR = 0.5
@@ -144,14 +144,11 @@ def main():
             img_window = np.array(ImageGrab.grab(bbox=win32gui.GetWindowRect(SCREENS_MHW[0])))
         except:
             SCREENS_MHW = None
-            MAIN_SLEEP = 1000
             logger.warning("Can't find MHW game. Please execute MHW!")
             text_msg1.set("Can't find MHW game. Please execute MHW!")
             label1.config(bg='red')
 
     if SCREENS_MHW != None:
-        
-        
         # Check if is MHW window active
         if win32gui.GetWindowText(win32gui.GetForegroundWindow()) != GAME_TITLE.upper():
             IS_CTRL = False
@@ -185,34 +182,32 @@ def main():
             res = cv2.matchTemplate(green_mask, IMG_DICT[ref], cv2.TM_CCOEFF_NORMED )
             max_cof = np.amax(res)
             loc = np.where(res == np.amax(res))
-            
+            pt = (loc[1][0], loc[0][0])
             # Get Bonus
             conf_bonus = 0.0
-            for pt in zip(*loc[::-1]):
-                # Positive bonus, if center is very near to the previous detected result.
-                center  = (pt[0] + IMG_DICT[ref].shape[1]/2,
-                            pt[1] + IMG_DICT[ref].shape[0]/2)
-                conf_bonus = BONUS_MAX - (abs(center[0] - N_DIC[ref]['cent'][0]) +\
-                                            abs(center[1] - N_DIC[ref]['cent'][1])) * BONUS_COF
-                conf_bonus = 0.0 if conf_bonus < 0.0 else conf_bonus
+            # Positive bonus, if center is very near to the previous detected result.
+            center  = (pt[0] + IMG_DICT[ref].shape[1]/2,
+                        pt[1] + IMG_DICT[ref].shape[0]/2)
+            conf_bonus = BONUS_MAX - (abs(center[0] - N_DIC[ref]['cent'][0]) +\
+                                        abs(center[1] - N_DIC[ref]['cent'][1])) * BONUS_COF
+            conf_bonus = 0.0 if conf_bonus < 0.0 else conf_bonus
 
-                # Negative bonus, avoid two label overlap
-                for ref_t in N_DIC:
-                    if ref_t != ref:
-                        bonus_neg = BONUS_MAX - (abs(center[0] - N_DIC[ref_t]['cent'][0]) +\
-                                                    abs(center[1] - N_DIC[ref_t]['cent'][1])) * BONUS_COF
-                        bonus_neg = 0.0 if bonus_neg < 0.0 else bonus_neg
-                        conf_bonus -= bonus_neg
-
+            # Negative bonus, avoid two label overlap
+            for ref_t in N_DIC:
+                if ref_t != ref:
+                    bonus_neg = BONUS_MAX - (abs(center[0] - N_DIC[ref_t]['cent'][0]) +\
+                                                abs(center[1] - N_DIC[ref_t]['cent'][1])) * BONUS_COF
+                    bonus_neg = 0.0 if bonus_neg < 0.0 else bonus_neg
+                    conf_bonus -= bonus_neg
+            
             # Get geometry
             if (max_cof + conf_bonus) > CONFIENT_THRES:
-                for pt in zip(*loc[::-1]):
-                    N_DIC[ref]['x1'] = pt
-                    N_DIC[ref]['x2'] = (pt[0] + IMG_DICT[ref].shape[1],
-                                        pt[1] + IMG_DICT[ref].shape[0])
-                    N_DIC[ref]['cent'] = (pt[0] + IMG_DICT[ref].shape[1]/2,
-                                            pt[1] + IMG_DICT[ref].shape[0]/2)
-                    N_DIC[ref]['conf'] = max_cof + conf_bonus
+                N_DIC[ref]['x1'] = pt
+                N_DIC[ref]['x2'] = (pt[0] + IMG_DICT[ref].shape[1],
+                                    pt[1] + IMG_DICT[ref].shape[0])
+                N_DIC[ref]['cent'] = (pt[0] + IMG_DICT[ref].shape[1]/2,
+                                        pt[1] + IMG_DICT[ref].shape[0]/2)
+                N_DIC[ref]['conf'] = max_cof + conf_bonus
                 
                 if DEBUG:
                     # Draw rectangle and text
@@ -230,7 +225,7 @@ def main():
                 # Find the max confident label's player location 
                 if max_cof + conf_bonus > p_loc[2]:
                     p_loc = (px, py, max_cof + conf_bonus)
-                
+            
         # Update player's location
         if p_loc != (0,0,0):
             P_LOC = p_loc
@@ -435,21 +430,15 @@ if __name__ == '__main__':
     label2.pack()
     label3.pack()
 
-    # try:
-    if True:
+    try:
         main() # Recursive call main()
         GUI.mainloop()
-    else:
-
-    # except (Exception, KeyboardInterrupt) as e:
+    except (Exception, KeyboardInterrupt) as e:
         IS_RUN = False
         logger.error("Catched Exception!")
-        logger.error(e)
-    
+        logger.error(e) 
     IS_RUN = False
-    # Terminate GUI
     try:
-        # terminate TK gui
-        GUI.destroy()
+        GUI.destroy()# terminate TK gui
     except:
         pass # TK is already gone.
