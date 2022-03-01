@@ -1,45 +1,51 @@
 # mhw_cv
-Auto-steamwork bot and Auto-mining bot using computer vision
+Steamwork bot and Auto-mining bot for MHW(Monster Hunter World)
+
+## Demostration
+BOT for steamwork mini-game
+https://www.youtube.com/watch?v=nfppLuI6OaQ
+
+Auto-mining BOT
+https://www.youtube.com/watch?v=dw5GLl0rFBk
 
 ## Requirement
 ```
 python 3.8.0
 pip install Pillow opencv-python numpy pynput pypiwin32 pyinstaller
 ```
-## Run auto steamwork 
-Execute your MHW, go to steamwork and press 'space' to start it.
-After that, execute command down below to start auto-bot.
-Also make sure your screen is focus on MHW, otherwise it won't work.
+## Run auto steamwork bot
+First, Execute your MHW, talk to steamwork NPC and press 'space' to start the steamwork game.
+After that, execute command below to start this program.
+Also make sure your screen focus is on MHW, otherwise it won't work.
 ```
 python steamwork.py
 ```
 
-## Run auto dragonite
+## Run auto-mine dragonite bot
 
-Execute your MHW, go exploring in guiding land and choose East camp(3).
+Frist, Execute your MHW and choose to go to explore in guiding land
+Choose East camp(3) as start camp.
 After that, adjust your camera orientation to make it face NORTH.(you can verify this by observe mini-map at left down corner)
 
 Execute command below and you're good to go.
 ```
 python mine_dragonite.py
 ```
-Through out the mining process, always make sure your camera is facing NORTH, otherwise it will go nuts.
-Currently, I don't have a way to deal with big monsters. Being killed is the best I can do for now. But the character know how to come back from the camp though, so don't worry.
+Through out the mining process, always make sure your camera is facing NORTH, otherwise it will not work.
+Currently, I don't have a way to deal with big monsters. They'll likely kill the character during the farming.Still, the bot know how to come back from the starting camp, so don't be too worry.
 
-Press 'p' to start the script
+Press 'p' to start/pause the script
 
-There're some equipment/jewels your should wear if you wanna farm effectively.
+There're some equipment/jewels your should wear if you want ot farm effectively.
 1. Intimidating III
-    * Let mini monsters ignore you
+    * Let mini monsters ignore you.
 2. Geologist III
     * Allow you to mine 4 times and pick up bone 5 times.
 3. Hunger Resistance III
-    * Prevent you suffering from stamina debuff.
+    * Prevent the stamina debuff cause by starvation.
 4. Master Gatherer I
-    * Speed up the gathering animation
+    * Speed up the gathering animation.
 
 ## TODO 
-* Dev a GUI
 * Add a auto-faceing north feature
-* Wear invisible cloak when monster is near.
-
+* Wear an invisible cloak when big monsters are near.

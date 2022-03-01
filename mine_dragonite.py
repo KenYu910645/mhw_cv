@@ -15,24 +15,27 @@ import sys
 # Tkinter GUI
 import tkinter as tk
 import tkinter.messagebox
-
+# 
+from config import THE_WAY_BACK, WORKING_LIST
+import copy
 # Configuration
-DEBUG = False
+DEBUG = True
 GAME_TITLE = 'monster hunter: world(421471)' # windows title must cantain these characters
-KEEP_ALIVE = 120 # sec
-GOAL_TOR = 0.5
-LOGGER_TIME = 1 # sec
-MAIN_SLEEP = 10 #msec
+KEEP_ALIVE = 120 # sec, If character can't get to next goal for a long time, throw a homeward ball and go back to camp
+GOAL_TOR = 0.5 # If character location is within the GOAL_TOR radius, consider goal reached.
+LOGGER_TIME = 1 # sec, logging frequency
+MAIN_SLEEP = 10 #msec, main loop frequency
 # Color range
 NUM_HSV_LO = (30, 0, 0) # Green number on mini-map
 NUM_HSV_UP = (45, 255, 255)
-CONFIENT_THRES = 0.75 # If confient higher then threshold, then detect as a number.
-CENTER_P = (74, 71) # The location of player in mini-map(always center)
+CONFIENT_THRES = 0.75 # If detection confident higher than CONFIENT_THRES, consider it as a number.
+CENTER_P = (74, 71) # The location of player in mini-map(always centered)
+# BONUS_MAX is to prevent jumpy/unstable detection.
 BONUS_MAX = 0.2 # Match confident will received a bonus, if it's very near its previous detected location.
 BONUS_COF = 0.02 # 0.2/10 <- 10 is the pixel range you wanna allow
 # Death 
-DEATH_LOC = (-23, 73) # Consider been killed if player near this location
-DEATH_TOR = 2 # The radius of the death zone.
+DEATH_LOC = (-23, 73) # If player near DEATH_LOC, consider player has been killed. 
+DEATH_TOR = 2 # The radius of this death location.
 
 WIN_LIST = []
 def enum_cb(hwnd, results):
@@ -119,8 +122,13 @@ def p_pressed():
         label3.config(bg='green')
         IS_CTRL = True
 
+def xy2sm(p):
+    sm_y = int(185.333 + int(p[0])*(126/27))
+    sm_x = int(91.4615 + int(p[1])*(129/26))
+    return (sm_y, sm_x)
+
 def main():
-    global IS_RUN, IS_CTRL, IS_DIED, KEY_CMD, N_DIC, P_LOC, GOAL_IDX, GOAL, GUI, T_REST, T_LAST_REACH_GOAL, T_LOGGER, SCREENS_MHW, MAIN_SLEEP
+    global IS_RUN, IS_CTRL, IS_DIED, KEY_CMD, N_DIC, P_LOC, GOAL_IDX, GOAL, GUI, T_REST, T_LAST_REACH_GOAL, T_LOGGER, SCREENS_MHW, MAIN_SLEEP,STATIC_MAP
     t_start = time.time()
     
     if SCREENS_MHW == None:
@@ -230,7 +238,7 @@ def main():
         if p_loc != (0,0,0):
             P_LOC = p_loc
 
-        # Check player's location has been init
+        # Check if player's location has been initilized
         if P_LOC == (0,0,0):
             logger.warning("Can't get player's location. Please make sure you're at East Camp(3) of the Guilding Land")
             text_msg2.set("Can't find location.\nPlease make sure you're at East Camp(3) of the Guilding Land")
@@ -245,7 +253,7 @@ def main():
                 label3.config(bg="red")
                 text_msg3.set("Press 'p' to START mining\n Keep your camera facing RIGHT NORTH")
 
-        # Check player's death or not
+        # Check if player's dead or not
         if abs(P_LOC[0] - DEATH_LOC[0]) < DEATH_TOR and abs(P_LOC[1] - DEATH_LOC[1]) < DEATH_TOR:
             GOAL = THE_WAY_BACK
             GOAL_IDX = 0
@@ -254,10 +262,10 @@ def main():
         
         dx, dy = (GOAL[GOAL_IDX][0] - P_LOC[0], GOAL[GOAL_IDX][1] - P_LOC[1])
         
-        # Reach goal, change to next one 
+        # Reached goal, set next goal 
         if T_REST != None or (abs(dx) <= GOAL_TOR and abs(dy) <= GOAL_TOR):
             T_LAST_REACH_GOAL = time.time()
-            # Relex a while at goal 
+            # Rest a while at this goal 
             if T_REST != None:
                 if time.time() - T_REST > GOAL[GOAL_IDX][-1]:
                     T_REST = None
@@ -300,8 +308,22 @@ def main():
         
         # Show images
         if DEBUG:
-            cv2.imshow('green_mask', green_mask)
-            cv2.imshow('window',cv2.cvtColor(img_map, cv2.COLOR_BGR2RGB))
+            green_mask = cv2.cvtColor(green_mask, cv2.COLOR_GRAY2RGB)
+            green_mask = cv2.resize(green_mask, (green_mask.shape[1]*2, green_mask.shape[0]*2))
+            img_map = cv2.cvtColor(img_map, cv2.COLOR_BGR2RGB)
+            img_map = cv2.resize(img_map, (img_map.shape[1]*2, img_map.shape[0]*2))
+            img_debug = cv2.hconcat([green_mask, img_map])
+            cv2.imshow('img_debug', img_debug)
+
+            # Draw player location
+            img_static_map = cv2.circle(copy.deepcopy(STATIC_MAP), xy2sm(P_LOC), 1, (0, 255, 0), 10)
+            # Draw goal location
+            img_static_map = cv2.circle(img_static_map, xy2sm(GOAL[GOAL_IDX][:2]), 10, (0, 0, 255), 3)
+            # Draw Arrow
+            img_static_map = cv2.arrowedLine(img_static_map, xy2sm(P_LOC), xy2sm(GOAL[GOAL_IDX][:2]),
+                                             (0, 255, 255), 2, tipLength = 0.1)
+            cv2.imshow("STATIC_MAP", img_static_map)
+            
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 IS_RUN = False
     # Recursive call main()
@@ -341,40 +363,15 @@ if __name__ == '__main__':
     IMG_4 = cv2.imread("guilding_land_pic/four.png" ,cv2.IMREAD_GRAYSCALE)
     IMG_3 = cv2.imread("guilding_land_pic/three.png" ,cv2.IMREAD_GRAYSCALE)
     IMG_DICT = {'3' : IMG_3, '4' : IMG_4, '10' : IMG_10, '11' : IMG_11}
-    WORKING_LIST = [
-            (30, 24, 'mine_10', 2),
-            (30, 52, 'neck_point', -1), 
-            (26, 55.5, 'mine_neck', 2),
-            (26, 65, 'mid_11', -1),
-            (16.5, 55, 'upper_vein', -1), 
-            (23, 48, 'mine_bridge_right', 2),
-            (16.5, 55, 'upper_vein', -1),
-            (11, 62, 'mine_bridge_left', 2),
-            (12.5, 76.0, 'lower_vein', -1),
-            (19, 75, 'trail_11', 2),
-            (41, 87, 'bone_11', 2),
-            (26, 65, 'mid_11', -1),
-            (30, 52, 'neck_point', -1),
-            (51, 39, 'super_mine', 2),
-            (58, 27, 'trail_10', 2),
-            (61, 22, 'bone_10', 2),
-            (68.5, 11, 'mine_cats', 2),
-            (70, 8, 'trail_cats', 2),
-            (69, -2, 'upper_vein', -1),
-            (73, -6, 'lower_vein', -1),
-            (70, -10, 'super_bone', 2),
-            (73, -6, 'lower_vein', -1),
-            (63, 2, 'upper_vein', -1),
-            (56.5, 8, 'bone_tree', 2),
-            (44, 6, 'avoid_deer_1', -1),
-            (33, 11, 'avoid_deer_2', -1)]
-    THE_WAY_BACK = [(-25.5, 68, 'mid_home', -1),
-                    (-26.5, 59, 'upper_vein', -1),
-                    (-29, 52, 'lower_vein', -1),
-                    (-18, 49, 'transition', -1),
-                    (3, 24, 'entry_point', -1),
-                    (28, 9, 'mid_4', -1),
-                    (51, 18 ,'mid_10', -1)]
+    if DEBUG:
+        STATIC_MAP = cv2.imread("guilding_land_pic/map_bg.png") # For debugging
+        CLS_COLOR = {-1 : (255,0,0), 2 : (0,0,255)}
+        for LIST in [WORKING_LIST, THE_WAY_BACK]:
+            for i,(x,y,name,cls) in enumerate(LIST):
+                STATIC_MAP = cv2.circle(STATIC_MAP, xy2sm((x,y)), 1, CLS_COLOR[cls], 5)
+                cv2.putText(STATIC_MAP, str(i), (xy2sm((x,y))[0]-5, xy2sm((x,y))[1]-5), cv2.FONT_HERSHEY_PLAIN,
+                            1, (0, 255, 255), 1, cv2.LINE_AA)
+    
     GOAL = WORKING_LIST
     # 
     N_DIC = {

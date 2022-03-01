@@ -1,0 +1,6 @@
+Pillow
+opencv-python
+numpy
+pynput
+pypiwin32
+pyinstaller
